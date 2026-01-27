@@ -1,0 +1,1 @@
+ALTER TABLE prediction ADD COLUMN resultado_real VARCHAR(50);

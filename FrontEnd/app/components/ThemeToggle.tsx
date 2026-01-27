@@ -1,0 +1,1 @@
+// ThemeToggle component removed - no longer needed

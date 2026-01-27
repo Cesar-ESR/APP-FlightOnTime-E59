@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+backend/.venv/
+dashboard/.venv/
+.git/
+.gitignore
+notebooks/
+0.0. DATASET ORIGINAL/
+data/dataset_prepared.parquet
+data/*.parquet

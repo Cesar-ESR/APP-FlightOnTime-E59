@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  # MYSQL
+  mysql:
+    image: mysql:8.0
+    container_name: flightontime-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: flightontime-database
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: fot59
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  # BACKEND (Spring)
+  backend-java:
+    build:
+      context: ./flights-predictor-test
+      dockerfile: Dockerfile
+    container_name: flightontime-java
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/flightontime-database
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: fot59
+      MODEL_BASE_URL: http://modelo-python:8000
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+      - frontend
+
+  # ML PYTHON (FASTAPI)
+  modelo-python:
+    build:
+      context: ./modelo
+      dockerfile: Dockerfile
+    container_name: flightontime-python
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: flightontime-database
+      DB_USER: admin
+      DB_PASSWORD: fot59
+    ports:
+      - "8000:8000"
+    networks:
+      - backend
+
+  # FRONTEND REACT
+  frontend-react:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flightontime-react
+    depends_on:
+      - backend-java
+      - modelo-python
+    ports:
+      - "3000:3000"
+    
+    environment:
+      # URL internas (dentro de la red Docker)
+     INTERNAL_API_JAVA:   http://backend-java:8080
+     INTERNAL_API_PYTHON: http://modelo-python:8000
+
+      # (Opcional) públicas para el navegador si tu UI llama directo
+     NEXT_PUBLIC_API_JAVA:   http://localhost:8080
+     NEXT_PUBLIC_API_PYTHON: http://localhost:8000
+    networks:
+      - frontend
+
+networks:
+  backend:
+  frontend:
+
+volumes:
+  mysql_data:
